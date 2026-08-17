@@ -1,1 +1,197 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DBD Simple</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#020406;color:#eee;font-family:'Courier New',monospace;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;overflow:hidden}.panel{background:#111;padding:24px;border:1px solid #333;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.8);display:flex;flex-direction:column;gap:12px;min-width:340px;position:relative;z-index:10}h1{font-size:1.6rem;color:#e74c3c;text-align:center;letter-spacing:2px;margin-bottom:8px}input[type="text"],select{width:100%;padding:10px;background:#222;border:1px solid #444;border-radius:6px;color:#eee;font-family:inherit}button{width:100%;padding:12px;background:#e74c3c;border:none;border-radius:6px;color:#fff;font-family:inherit;font-size:1rem;cursor:pointer;font-weight:bold}button:hover{background:#c0392b}.btn-g{background:#27ae60}.btn-g:hover{background:#1e8449}.rl{background:#1a1a1a;border-radius:6px;max-height:120px;overflow-y:auto;border:1px solid #333}.rl-item{display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid #333;cursor:pointer;font-size:.9rem}.rl-item:hover{background:#333}#menu,#lobby,#gameWrap{display:none}#menu{display:flex}#pList{background:#1a1a1a;border-radius:6px;padding:10px;min-height:80px;font-size:.9rem}.pentry{display:flex;justify-content:space-between;padding:4px 0}#gameWrap{position:relative;z-index:5}canvas{display:block;border:2px solid #222;border-radius:4px}#hud,#controls{position:absolute;background:rgba(0,0,0,.75);padding:12px;border-radius:6px;font-size:.85rem;line-height:1.6;border:1px solid #333;pointer-events:none}#hud{top:8px;left:8px}#controls{bottom:8px;right:8px;text-align:right}#aHud{display:none;position:absolute;bottom:80px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none}#aTxt{margin-bottom:8px;font-size:1.4rem;font-weight:bold;text-shadow:0 0 6px #000;color:#fff}#aBg{width:350px;height:18px;background:rgba(0,0,0,.8);border:2px solid #555;border-radius:8px;display:none}#aBar{width:0%;height:100%;background:#f39c12;box-shadow:0 0 10px #f39c12}#ov{display:none;position:absolute;inset:0;background:rgba(0,0,0,.85);align-items:center;justify-content:center;flex-direction:column;gap:16px;font-size:1.8rem;font-weight:bold;z-index:20}#ov.show{display:flex}.spec{color:#f39c12;font-weight:bold;animation:pulse 1.5s infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}#cW{position:fixed;bottom:20px;left:20px;width:320px;display:none;flex-direction:column;gap:4px;z-index:999;pointer-events:none}#cM{max-height:180px;overflow-y:auto;pointer-events:auto;font-size:.85rem;display:flex;flex-direction:column;gap:2px}.cm{background:rgba(0,0,0,.7);padding:6px 10px;border-radius:4px;word-wrap:break-word;color:#fff;border-left:3px solid #f39c12}#cI{pointer-events:auto;background:rgba(0,0,0,.85);border:1px solid #666;display:none;color:#fff;padding:10px;font-size:.9rem;border-radius:4px}
+#warn{position:absolute;top:20px;left:50%;transform:translateX(-50%);background:#e74c3c;color:#fff;padding:8px 16px;border-radius:4px;font-weight:bold;z-index:999;display:none;}
+</style></head><body>
+
+<div id="warn">Connection Lost! Reconnecting...</div>
+
+<div id="setPan" class="panel" style="display:none;position:absolute;z-index:999;top:50%;left:50%;transform:translate(-50%,-50%);width:320px">
+  <h2>Settings</h2>
+  <label style="font-size:0.85rem">Volume: <span id="vVol">50</span>%<input type="range" id="iVol" min="0" max="100" value="50" oninput="G('vVol').innerText=this.value;window.vol=this.value/100;" style="width:100%"></label>
+  <label style="font-size:0.85rem">Brightness: <span id="vBri">100</span>%<input type="range" id="iBri" min="50" max="200" value="100" oninput="G('vBri').innerText=this.value;updVis();" style="width:100%"></label>
+  <label style="font-size:0.85rem">Contrast: <span id="vCon">100</span>%<input type="range" id="iCon" min="50" max="200" value="100" oninput="G('vCon').innerText=this.value;updVis();" style="width:100%"></label>
+  <label style="font-size:0.85rem">Gamma: <span id="vGam">100</span>%<input type="range" id="iGam" min="50" max="200" value="100" oninput="G('vGam').innerText=this.value;updVis();" style="width:100%"></label>
+  <h3 style="margin-top:4px">Keybinds <span style="font-size:0.7rem;font-weight:normal">(Click to Change)</span></h3>
+  <div id="kbL" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:.8rem;margin-bottom:8px"></div>
+  <button id="bSetC" style="background:#555">Save & Close</button>
+</div>
+
+<div id="menu" class="panel">
+  <h1>💀 DBD Browser</h1>
+  <div class="rl" id="rL"><div style="padding:8px;color:#aaa">Loading...</div></div>
+  <input id="iN" type="text" placeholder="Username" maxlength="10"/>
+  <input id="iR" type="text" placeholder="Room ID" value="room1"/>
+  <select id="iRo"><option value="survivor">🟢 Prefer Survivor</option><option value="killer">🔴 Prefer Killer</option></select>
+  <label style="display:flex;gap:8px;align-items:center;font-size:.9rem"><input type="checkbox" id="iP" checked style="width:auto"/> Public</label>
+  <button id="bJ">Join / Create Room</button>
+  <button id="bSetBtn" style="background:#555">⚙️ Settings</button>
+  <div id="mE" style="color:#e74c3c;font-size:.85rem;font-weight:bold;margin-top:8px;"></div>
+</div>
+<div id="lobby" class="panel">
+  <h1 id="lT">Lobby</h1>
+  <div id="pList"></div>
+   <label style="display:flex;gap:8px;align-items:flex-start;font-size:.82rem;color:#ddd;line-height:1.3"><input type="checkbox" id="bF" style="width:auto;margin-top:2px"/> Fill remaining slots with bots<br><span style="color:#888;font-size:.72rem">Balanced 1 killer / 4 survivors</span></label>
+  <button id="bS" class="btn-g" style="display:none">▶ Start Game</button>
+  <button id="bL" style="background:#555">Leave</button>
+</div>
+<div id="gameWrap">
+  <canvas id="cv"></canvas>
+  <div id="hud">
+    <div style="color:#f39c12;font-weight:bold" id="hG">⚡ Gens: 0/3</div>
+    <div id="hX" style="color:#aaa">🔒 Exits Locked</div>
+    <div id="hE" style="color:#2ecc71;font-weight:bold"></div>
+    <div id="hP" style="margin-top:8px;border-top:1px solid #444;padding-top:8px"></div>
+  </div>
+  <div id="controls"></div>
+  <div id="aHud"><div id="aTxt"></div><div id="aBg"><div id="aBar"></div></div></div>
+  <div id="ov"><div id="oT"></div><button id="bB" style="width:auto;padding:12px 32px;background:#333;border:1px solid #666;pointer-events:auto">Back to Lobby</button></div>
+</div>
+<div id="cW"><div id="cM"></div><input id="cI" type="text" placeholder="Enter to chat..." maxlength="100"/></div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+window.onerror=function(msg,url,line){const e=document.getElementById('mE');if(e)e.innerHTML+='<br>ERR: '+msg;};
+
+const G=id=>document.getElementById(id);
+const TL=32,CO=40,RO=30,VW=800,VH=600,GN=3,KARC=Math.PI*0.35,SARC=Math.PI*0.45,VS=400,VK=240,LN=90;
+const socket=io();
+ let myId=null,myRole=null,gMap=null,gS=null,prevS=null,stateStamp=0,cX=0,cY=0,cA=Math.PI/2,sI=0;
+let inp={up:0,down:0,left:0,right:0,sprint:0},curAct=null,sChk=null,fx=[],isSpec=false,started=false;
+let genAlerts=[],lastState=Date.now();
+
+window.vol=0.5;
+let binds={up:'w',down:'s',left:'a',right:'d',sprint:'shift',action:' ',attack:' ',interact:'e'};
+let waitK=null;
+
+function updBinds(){G('kbL').innerHTML=Object.keys(binds).map(k=>`<div>${k.toUpperCase()}: <button onclick="waitK='${k}';G('kbL').innerHTML='Press any key...'" style="padding:4px;font-size:.7rem;width:100%">${binds[k]===' '?'SPACE':binds[k].toUpperCase()}</button></div>`).join('');}
+updBinds();
+function updVis(){G('cv').style.filter=`brightness(${G('iBri').value}%) contrast(${G('iCon').value}%) brightness(${G('iGam').value}%)`;}
+G('bSetBtn').onclick=()=>G('setPan').style.display='flex';
+G('bSetC').onclick=()=>G('setPan').style.display='none';
+
+const cv=G('cv'),ctx=cv.getContext('2d');cv.width=VW;cv.height=VH;
+const fCv=document.createElement('canvas'),fCtx=fCv.getContext('2d');fCv.width=VW;fCv.height=VH;
+const fC=document.createElement('canvas');fC.width=64;fC.height=64;const fX=fC.getContext('2d');
+fX.fillStyle='#1a201a';fX.fillRect(0,0,64,64);for(let i=0;i<300;i++){fX.fillStyle=Math.random()>.5?'#252c25':'#151a15';fX.fillRect(Math.random()*64,Math.random()*64,2,2);}
+const flP=ctx.createPattern(fC,'repeat');
+const wC=document.createElement('canvas');wC.width=TL;wC.height=TL;const wX=wC.getContext('2d');
+wX.fillStyle='#2c353b';wX.fillRect(0,0,TL,TL);wX.strokeStyle='#1a1f24';wX.lineWidth=4;wX.strokeRect(0,0,TL,TL);
+for(let i=0;i<20;i++){wX.fillStyle='#3a444a';wX.fillRect(Math.random()*TL,Math.random()*TL,3,3);}
+const wlP=ctx.createPattern(wC,'repeat');
+const d2=(a,b)=>Math.hypot(a.px-b.px,a.py-b.py);
+const lA=(a,b,t)=>{let d=b-a;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+=Math.PI*2;return a+d*t;};
+
+function startLoops(){if(started)return;started=true;requestAnimationFrame(render);setInterval(sendInp,50);}
+
+// Auto Reconnect Handlers
+socket.on('disconnect', () => { G('warn').style.display='block'; G('warn').innerText='Connection Lost! Refreshing in 3s...'; setTimeout(()=>location.reload(), 3000); });
+socket.on('connect_error', () => { G('warn').style.display='block'; G('warn').innerText='Server unavailable. Refreshing...'; setTimeout(()=>location.reload(), 3000); });
+
+socket.on('connect',()=>socket.emit('getRooms'));
+socket.on('roomList',rs=>G('rL').innerHTML=rs.length?rs.map(r=>`<div class="rl-item" onclick="document.getElementById('iR').value='${r.id}'"><span>🌐 ${r.id}</span><span style="color:#aaa">${r.players}/5·${r.phase==='lobby'?'Lobby':'In Game'}</span></div>`).join(''):'<div style="padding:8px;color:#aaa">No rooms</div>');
+ G('bJ').onclick=()=>socket.emit('joinRoom',{roomId:G('iR').value.trim(),prefRole:G('iRo').value,name:G('iN').value.trim(),isPub:G('iP').checked});
+ G('bF').onchange=()=>socket.emit('setBotFill',G('bF').checked);
+G('bL').onclick=()=>location.reload();
+G('bS').onclick=()=>socket.emit('startGame');
+G('bB').onclick=()=>{socket.emit('backToLobby');G('ov').classList.remove('show');};
+
+socket.on('joined',d=>{myId=d.playerId;myRole=d.prefRole;gMap=d.map;G('menu').style.display='none';G('mE').textContent='';G('cW').style.display='flex';
+  if(d.phase==='playing'){G('lobby').style.display='none';G('gameWrap').style.display='block';startLoops();}else{G('lobby').style.display='flex';G('lT').textContent='Room: '+d.roomId;}});
+ socket.on('lobbyUpdate',d=>{if(d.phase==='lobby'&&G('gameWrap').style.display==='block'){G('gameWrap').style.display='none';G('lobby').style.display='flex';G('ov').classList.remove('show');gS=null;fx=[];genAlerts=[];}
+   G('bF').checked=!!d.botFill;G('pList').innerHTML=d.players.length?d.players.map(p=>`<div class="pentry"><span>${p.isBot?'🤖 ':''}${p.name}</span><span style="color:#888">${p.isBot?'Bot':p.prefRole==='killer'?'🔴 Killer':'🟢 Survivor'}</span></div>`).join(''):'Empty';const humans=d.players.filter(p=>!p.isBot).length;G('bS').style.display=humans>=2||(d.botFill&&humans>=1)?'block':'none';});
+socket.on('chat',m=>{const el=document.createElement('div');el.className='cm';el.innerHTML=`<b style="color:#f39c12">${m.name}:</b> ${m.msg}`;G('cM').appendChild(el);G('cM').scrollTop=G('cM').scrollHeight;});
+ socket.on('gameStart',()=>{G('lobby').style.display='none';G('gameWrap').style.display='block';sI=0;genAlerts=[];prevS=null;stateStamp=performance.now();startLoops();});
+ socket.on('state',s=>{prevS=gS;gS=s;stateStamp=performance.now();genAlerts=s.genAlerts||[];lastState=Date.now();const me=gS.players.find(p=>p.id===myId);if(me){myRole=me.role;if(!['healthy','injured'].includes(me.health)){curAct=null;sChk=null;}}updHud();});
+socket.on('effect',e=>fx.push({...e,life:1.0}));
+socket.on('gameOver',d=>{G('ov').classList.add('show');G('oT').innerHTML=d.result==='killerWin'?'<span style="color:#e74c3c">💀 KILLER WINS</span>':'<span style="color:#2ecc71">🏃 SURVIVORS ESCAPE</span>';});
+socket.on('error',m=>G('mE').textContent=m);
+socket.on('genAlert',({px,py})=>genAlerts.push({px,py,until:Date.now()+2000}));
+
+window.addEventListener('keydown',e=>{if(e.repeat)return;if(waitK){e.preventDefault();let k=e.key.toLowerCase();if(k===' ')k=' ';binds[waitK]=k;waitK=null;updBinds();return;}if(e.key==='Enter'){if(G('menu').style.display!=='none'||G('setPan').style.display!=='none')return;e.preventDefault();if(document.activeElement===G('cI')){const v=G('cI').value.trim();if(v)socket.emit('chat',v);G('cI').value='';G('cI').blur();G('cI').style.display='none';}else{G('cI').style.display='block';G('cI').focus();}return;}if(['INPUT','SELECT'].includes(e.target.tagName))return;
+  const k=e.key.toLowerCase();if(Object.values(binds).includes(k))e.preventDefault();if(isSpec){if(k===binds.left)sI--;if(k===binds.right)sI++;return;}
+  if(k===binds.up)inp.up=1;if(k===binds.down)inp.down=1;if(k===binds.left)inp.left=1;if(k===binds.right)inp.right=1;if(k===binds.sprint)inp.sprint=1;
+  if(!gS)return;const me=gS.players.find(p=>p.id===myId);if(!me)return;
+  if(myRole==='killer'){if(k===binds.attack)inp.attack=1;if(k===binds.interact)inp.interact=1;}
+  else if(myRole==='survivor'&&k===binds.action){
+    if(sChk&&curAct){if(sChk.p>=sChk.zs&&sChk.p<=sChk.ze){socket.emit('skillCheck',{type:curAct.type,id:curAct.id,result:'success'});sChk=null;}else failChk();return;}
+    if(curAct){curAct=null;return;}
+    const hk=gS.players.find(p=>p.health==='hooked'&&d2(me,p)<60),hl=gS.players.find(p=>p.id!==myId&&['injured','downed'].includes(p.health)&&d2(me,p)<50),gn=gS.generators.find(g=>!g.done&&d2(me,g)<80),ex=gS.gensCompleted>=GN?gS.exits.find(x=>!x.open&&d2(me,x)<80):null;
+    if(hk){curAct={type:'rescue',id:hk.id};inp.up=0;inp.down=0;inp.left=0;inp.right=0;return;}if(hl){curAct={type:'heal',id:hl.id};inp.up=0;inp.down=0;inp.left=0;inp.right=0;return;}
+    if(gn){curAct={type:'repair',id:gn.id};inp.up=0;inp.down=0;inp.left=0;inp.right=0;return;}if(ex){curAct={type:'exit',id:ex.id};inp.up=0;inp.down=0;inp.left=0;inp.right=0;return;}
+  }if((inp.up||inp.down||inp.left||inp.right)&&curAct){if(sChk)failChk();curAct=null;}
+});
+window.addEventListener('keyup',e=>{if(['INPUT','SELECT'].includes(e.target.tagName)||waitK)return;const k=e.key.toLowerCase();if(k===binds.up)inp.up=0;if(k===binds.down)inp.down=0;if(k===binds.left)inp.left=0;if(k===binds.right)inp.right=0;if(k===binds.sprint)inp.sprint=0;if(!isSpec&&gS&&myRole==='killer'){if(k===binds.attack)inp.attack=0;if(k===binds.interact)inp.interact=0;}});
+function failChk(){if(curAct)socket.emit('skillCheck',{type:curAct.type,id:curAct.id,result:'fail'});sChk=null;curAct=null;}
+function sendInp(){if(!gS||gS.phase!=='playing')return;if((inp.up||inp.down||inp.left||inp.right)&&curAct){if(sChk)failChk();curAct=null;}socket.emit('input',{...inp,camAngle:cA,action:curAct});}
+function updHud(){
+   if(!gS)return;G('hG').textContent=`⚡ Gens: ${gS.gensCompleted}/${GN}`;const dn=gS.gensCompleted>=GN,xo=gS.exits.filter(e=>e.open).length;G('hX').style.color=dn?'#27ae60':'#aaa';G('hX').textContent=dn?(xo>0?'🚪 EXIT OPEN!':'🔓 Find Exits'):'🔒 Exits Locked';G('hE').textContent=(gS.escaped>0?`✅ ${gS.escaped} escaped! `:'')+(myRole==='killer'&&gS.genAlerts?.length?'⚠️ GEN EXPLOSION':'');
+  const me=gS.players.find(p=>p.id===myId);isSpec=!me||me.role==='spectator'||['escaped','sacrificed'].includes(me.health);
+  const ic={healthy:'❤️',injured:'🩸',downed:'💀',hooked:'🪝',sacrificed:'🪦',escaped:'🏃',carried:'🖐',spectator:'👁️'};
+  G('hP').innerHTML=gS.players.filter(p=>p.role!=='spectator').map(p=>`<div>${p.role==='killer'?'🔴':'🟢'} <span style="color:#ddd">${p.name}</span>${p.id===myId?' (You)':''} — ${ic[p.health]||'❤️'}</div>`).join('');
+  if(isSpec){const ts=gS.players.filter(p=>!['escaped','sacrificed','spectator'].includes(p.health));let tn='Nobody';if(ts.length>0){if(sI<0)sI=ts.length-1;tn=ts[((sI%ts.length)+ts.length)%ts.length].name;}G('controls').innerHTML=`<div class="spec">👁️ SPECTATING: ${tn}</div><br>[${binds.left.toUpperCase()}]/[${binds.right.toUpperCase()}] Switch<br>Enter—Chat`;}
+   else G('controls').innerHTML=myRole==='killer'?`Move: ${binds.up.toUpperCase()}${binds.left.toUpperCase()}${binds.down.toUpperCase()}${binds.right.toUpperCase()}<br>Attack: ${binds.attack===' '?'SPACE':binds.attack.toUpperCase()}<br>Pick/Hook: ${binds.interact.toUpperCase()}<br><span style="color:#f08080">Fresh sprint trails reveal survivors briefly</span><br>Chat: ENTER`:`Move: ${binds.up.toUpperCase()}${binds.left.toUpperCase()}${binds.down.toUpperCase()}${binds.right.toUpperCase()}<br>Sprint: ${binds.sprint.toUpperCase()}<br>Action: ${binds.action===' '?'SPACE':binds.action.toUpperCase()}<br>Move to Cancel<br>Chat: ENTER`;
+  const ah=G('aHud'),at=G('aTxt'),abg=G('aBg'),ab=G('aBar');ab.style.background='#f39c12';ab.style.boxShadow='0 0 10px #f39c12';
+  if(!isSpec&&me&&me.role==='survivor'){let pBar=null;if(me.rescueProgress>0)pBar={t:'Being Rescued...',p:me.rescueProgress,c:'#f39c12'};else if(me.healProgress>0)pBar={t:'Being Healed...',p:me.healProgress,c:'#2ecc71'};else if(me.health==='hooked')pBar={t:'Entity Progress',p:Math.max(0,100-(me.hookProgress||0)),c:'#e74c3c'};
+    if(curAct&&!['downed','hooked','carried'].includes(me.health)){ah.style.display='block';abg.style.display='block';let p=0,t='';if(curAct.type==='repair'){p=gS.generators.find(g=>g.id===curAct.id)?.progress||0;t='Repairing...';}if(curAct.type==='heal'){p=gS.players.find(x=>x.id===curAct.id)?.healProgress||0;t='Healing...';}if(curAct.type==='rescue'){p=gS.players.find(x=>x.id===curAct.id)?.rescueProgress||0;t='Unhooking...';}if(curAct.type==='exit'){p=gS.exits.find(x=>x.id===curAct.id)?.progress||0;t='Opening Exit...';}at.textContent=t;ab.style.width=p+'%';}else if(pBar){ah.style.display='block';abg.style.display='block';at.textContent=pBar.t;ab.style.width=pBar.p+'%';ab.style.background=pBar.c;ab.style.boxShadow='0 0 10px '+pBar.c;}
+    else if(!['downed','hooked','carried'].includes(me.health)){const hk=gS.players.find(p=>p.health==='hooked'&&d2(me,p)<60),hl=gS.players.find(p=>p.id!==myId&&['injured','downed'].includes(p.health)&&d2(me,p)<50),gn=gS.generators.find(g=>!g.done&&d2(me,g)<80),ex=gS.gensCompleted>=GN?gS.exits.find(x=>!x.open&&d2(me,x)<80):null;if(hk||hl||gn||ex){ah.style.display='block';abg.style.display='none';at.innerHTML=`<span style="color:#f39c12">[${binds.action===' '?'SPACE':binds.action.toUpperCase()}]</span> ${hk?'Unhook':hl?'Heal':gn?'Repair':'Open Exit'}`;}else ah.style.display='none';}else ah.style.display='none';
+  }else ah.style.display='none';
+}
+function drawFog(tgt){fCtx.setTransform(1,0,0,1,0,0);fCtx.clearRect(0,0,VW,VH);if(!tgt){fCtx.fillStyle='#000';fCtx.fillRect(0,0,VW,VH);ctx.restore();ctx.drawImage(fCv,0,0);return;}const rad=tgt.role==='killer'?VK:VS,pts=[];for(let i=0;i<360;i+=2){const a=(i/360)*Math.PI*2,dx=Math.cos(a),dy=Math.sin(a);let hit={x:tgt.px+dx*rad,y:tgt.py+dy*rad};for(let dd=0;dd<rad;dd+=3){const tx=Math.floor((tgt.px+dx*dd)/TL),ty=Math.floor((tgt.py+dy*dd)/TL);if(tx<0||tx>=CO||ty<0||ty>=RO||gMap[ty][tx]===1){hit={x:tgt.px+dx*Math.max(0,dd-3),y:tgt.py+dy*Math.max(0,dd-3)};break;}}pts.push(hit);}fCtx.fillStyle='rgba(20,25,30,1)';fCtx.fillRect(0,0,VW,VH);fCtx.globalCompositeOperation='destination-out';fCtx.save();fCtx.translate(VW/2,VH/2+LN);fCtx.rotate(-cA);fCtx.translate(-cX,-cY);fCtx.beginPath();pts.forEach((p,i)=>i===0?fCtx.moveTo(p.x,p.y):fCtx.lineTo(p.x,p.y));fCtx.closePath();fCtx.fillStyle='#000';fCtx.fill();const gr=fCtx.createRadialGradient(tgt.px,tgt.py,rad*.75,tgt.px,tgt.py,rad);gr.addColorStop(0,'#000');gr.addColorStop(1,'transparent');fCtx.fillStyle=gr;fCtx.fill();fCtx.restore();fCtx.globalCompositeOperation='source-over';ctx.restore();ctx.drawImage(fCv,0,0);}
+
+ function visualPlayers(now){
+   if(!gS)return[];
+   const alpha=prevS&&stateStamp?Math.min(1,Math.max(0,(performance.now()-stateStamp)/50)):1;
+   return gS.players.map(p=>{const old=prevS&&prevS.players.find(x=>x.id===p.id);if(!old||old.role!==p.role)return p;return{...p,px:old.px+(p.px-old.px)*alpha,py:old.py+(p.py-old.py)*alpha,facing:lA(old.facing,p.facing,alpha)};});
+ }
+ function render(){
+  requestAnimationFrame(render);
+  if(!gS||gS.phase==='lobby'||G('gameWrap').style.display==='none')return;
+  const now=Date.now();
+  
+  if (now - lastState > 3000) {
+    G('warn').style.display = 'block'; G('warn').innerText = 'Server Lag! Waiting...';
+  } else {
+    G('warn').style.display = 'none';
+  }
+  
+   const vp=visualPlayers(now),me=vp.find(p=>p.id===myId)||gS.players.find(p=>p.id===myId);
+  if(curAct&&['repair','heal'].includes(curAct.type)&&!isSpec){if(!sChk&&Math.random()<.006){sChk={p:0,zs:.5+Math.random()*.25,ze:0,w:.15};sChk.ze=sChk.zs+sChk.w;}}else sChk=null;
+  if(sChk){sChk.p+=0.0075;if(sChk.p>1)failChk();}
+  genAlerts=genAlerts.filter(a=>now<a.until);
+   let cTgt=me;if(isSpec){const ts=vp.filter(p=>!['escaped','sacrificed','spectator'].includes(p.health));if(ts.length>0)cTgt=ts[((sI%ts.length)+ts.length)%ts.length];}
+  if(cTgt){cA=lA(cA,cTgt.facing+Math.PI/2,.03);cX+=(cTgt.px-cX)*.15;cY+=(cTgt.py-cY)*.15;}
+  ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#000';ctx.fillRect(0,0,VW,VH);ctx.save();ctx.translate(VW/2,VH/2+LN);ctx.rotate(-cA);ctx.translate(-cX,-cY);
+  ctx.fillStyle=flP;ctx.fillRect(0,0,CO*TL,RO*TL);
+  for(let r=0;r<RO;r++)for(let c=0;c<CO;c++){if(gMap[r][c]===1){ctx.fillStyle=wlP;ctx.fillRect(c*TL,r*TL,TL,TL);}if(gMap[r][c]===2){const op=gS.exits.some(e=>e.open&&((e.side==='left'&&c===0)||(e.side==='right'&&c===CO-1)));ctx.fillStyle=op?'#1a5c1a':'#0a1a0a';ctx.fillRect(c*TL,r*TL,TL,TL);if(op){ctx.fillStyle='#5dfc5d';ctx.font='bold 18px monospace';ctx.textAlign='center';ctx.fillText(c===0?'←':'→',c*TL+16,r*TL+22);}}}
+  gS.generators.forEach(g=>{const hi=curAct&&curAct.type==='repair'&&curAct.id===g.id;if(hi){ctx.shadowColor='#f39c12';ctx.shadowBlur=16;}ctx.fillStyle=g.done?'#27ae60':(hi?'#f39c12':'#444');ctx.beginPath();ctx.arc(g.px,g.py,11,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#fff';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText(g.done?'✓':'⚡',g.px,g.py+4);});
+  gS.hooks.forEach(h=>{ctx.save();ctx.translate(h.px,h.py);ctx.rotate(cA);ctx.strokeStyle='#555';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,12);ctx.lineTo(0,-10);ctx.lineTo(14,-10);ctx.stroke();ctx.beginPath();ctx.arc(14,-6,4,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#888';ctx.font='11px monospace';ctx.fillText('🪝',0,-14);ctx.restore();});
+  for(let i=fx.length-1;i>=0;i--){const s=fx[i];ctx.fillStyle=s.type==='spark'?`rgba(255,200,50,${s.life})`:`rgba(180,0,0,${s.life})`;ctx.beginPath();ctx.arc(s.px,s.py,20*(1-s.life)+10,0,Math.PI*2);ctx.fill();s.life-=.05;if(s.life<=0)fx.splice(i,1);}
+   if(myRole==='killer'&&gS.scratchMarks){gS.scratchMarks.forEach(m=>{const pr=Math.max(0,1-(now-m.createdAt)/2200);if(pr<=0)return;ctx.save();ctx.translate(m.px,m.py);ctx.rotate(m.facing+Math.PI/2);ctx.strokeStyle=`rgba(245,55,55,${.8*pr})`;ctx.lineWidth=3;ctx.lineCap='round';for(const o of[-7,0,7]){ctx.beginPath();ctx.moveTo(o-4,-8);ctx.lineTo(o+4,8);ctx.stroke();}ctx.restore();});}
+   if(cTgt&&cTgt.role==='killer'){vp.filter(p=>p.role==='survivor'&&!['escaped','sacrificed','spectator'].includes(p.health)).forEach(p=>{if(now<(p.exhaustAuraEnd||0)){const pr=(p.exhaustAuraEnd-now)/2000,pu=1+0.3*Math.sin(now/120);ctx.beginPath();ctx.arc(p.px,p.py,56*pu,0,Math.PI*2);ctx.strokeStyle=`rgba(220,30,30,${.55*pr})`;ctx.lineWidth=3;ctx.stroke();ctx.beginPath();ctx.arc(p.px,p.py,36*pu,0,Math.PI*2);ctx.strokeStyle=`rgba(255,80,80,${.3*pr})`;ctx.lineWidth=2;ctx.stroke();}else if(p.isSprinting){ctx.beginPath();ctx.arc(p.px,p.py,28,0,Math.PI*2);ctx.strokeStyle=`rgba(220,30,30,0.5)`;ctx.lineWidth=3;ctx.stroke();}});}
+   vp.filter(p=>p.role!=='spectator').forEach(p=>{
+    if(['escaped','sacrificed'].includes(p.health))return;
+    if(p.role==='killer'){const rdy=now-(p.attackCooldown||0)>2000;ctx.beginPath();ctx.moveTo(p.px,p.py);ctx.arc(p.px,p.py,90,p.facing-KARC/2,p.facing+KARC/2);ctx.closePath();ctx.fillStyle=rdy?'rgba(231,76,60,0.5)':'rgba(100,30,30,0.2)';ctx.fill();ctx.strokeStyle=rdy?'rgba(255,100,100,0.8)':'rgba(150,50,50,0.4)';ctx.lineWidth=2;ctx.stroke();}
+    else if(p.health!=='downed'){ctx.beginPath();ctx.moveTo(p.px,p.py);ctx.arc(p.px,p.py,50,p.facing-SARC/2,p.facing+SARC/2);ctx.fillStyle='rgba(255,255,255,.05)';ctx.fill();}
+  });
+   vp.filter(p=>p.role!=='spectator').forEach(p=>{
+    if(['escaped','sacrificed'].includes(p.health))return;
+    ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=10;ctx.beginPath();ctx.arc(p.px,p.py,12,0,Math.PI*2);
+    ctx.fillStyle=p.role==='killer'?'#e74c3c':p.health==='injured'?'#f0a500':p.health==='downed'?'#8b0000':'#2ecc71';ctx.fill();
+    ctx.shadowBlur=0;ctx.strokeStyle=p.id===myId?'#fff':'rgba(255,255,255,.2)';ctx.lineWidth=p.id===myId?2:1;ctx.stroke();
+    if(p.health!=='downed'){ctx.beginPath();ctx.moveTo(p.px+Math.cos(p.facing)*14,p.py+Math.sin(p.facing)*14);ctx.lineTo(p.px+Math.cos(p.facing+2.4)*8,p.py+Math.sin(p.facing+2.4)*8);ctx.lineTo(p.px+Math.cos(p.facing-2.4)*8,p.py+Math.sin(p.facing-2.4)*8);ctx.fillStyle=p.id===myId?'#fff':'rgba(255,255,255,.5)';ctx.fill();}
+    ctx.save();ctx.translate(p.px,p.py);ctx.rotate(cA);
+    if(p.health==='downed'){ctx.fillStyle='#fff';ctx.font='12px monospace';ctx.fillText('💀',0,4);}
+    if(p.health==='carried'){ctx.fillStyle='#fff';ctx.font='10px monospace';ctx.fillText('🖐',0,3);}
+    if(p.health==='hooked'){ctx.fillStyle='#111';ctx.fillRect(-16,-26,32,5);ctx.fillStyle='#e74c3c';ctx.fillRect(-16,-26,32*(1-(p.hookProgress||0)/100),5);}
+    ctx.fillStyle='rgba(0,0,0,.8)';ctx.fillRect(-26,-32,52,14);ctx.fillStyle=p.id===myId?'#fff':'#bbb';ctx.font='9px monospace';ctx.textAlign='center';ctx.fillText((p.id===myId?'▶ ':'')+p.name,0,-21);
+    ctx.restore();
+  });
+  drawFog(cTgt);ctx.setTransform(1,0,0,1,0,0);
+  if(myRole==='killer'&&cTgt){genAlerts.forEach(al=>{const pr=(al.until-now)/2000,an=Math.atan2(al.py-cTgt.py,al.px-cTgt.px)-cA,ox=VW/2+Math.cos(an)*70,oy=VH/2+LN+Math.sin(an)*70;ctx.save();ctx.translate(ox,oy);ctx.rotate(an+Math.PI/2);ctx.fillStyle=`rgba(231,76,60,${pr})`;ctx.strokeStyle=`rgba(255,255,255,${pr*.6})`;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(8,8);ctx.lineTo(0,2);ctx.lineTo(-8,8);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();});}
+  if(sChk&&!isSpec){const cx=VW/2,cy=VH/2;ctx.beginPath();ctx.arc(cx,cy,45,0,Math.PI*2);ctx.lineWidth=8;ctx.strokeStyle='rgba(0,0,0,.8)';ctx.stroke();ctx.beginPath();ctx.arc(cx,cy,45,sChk.zs*Math.PI*2,sChk.ze*Math.PI*2);ctx.strokeStyle='#fff';ctx.lineWidth=8;ctx.stroke();const na=sChk.p*Math.PI*2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(na)*55,cy+Math.sin(na)*55);ctx.lineWidth=3;ctx.strokeStyle='#e74c3c';ctx.stroke();}
+}
+</script></body></html>
 
